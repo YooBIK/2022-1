@@ -1,0 +1,59 @@
+// containerized web server example
+// starting from a base image of ubuntu, put apache2 and a static html page -> make the final a new docker image to push to dockerhub
+
+docker ps // 동작 중에 있는 container 확인
+docker images
+
+docker run -it -d ubuntu // 
+docker exec -it <container id or name> bash 
+// container 속 확인 후
+apt-get update
+apt-get install -y apache2
+cd /var/www/html
+vim 1.html // vim is found not installed
+apt-get install -y vim
+cd /var/www/html
+vim 1.html
+apt-get install -y vim
+vim 1.html
+// html 문서 속
+<html>
+<head>
+<title>My First Web Service</title>
+</head>
+<body>
+<div style ="text-align:center">
+<h2 style="color: dodgerblue"> Hello, Hongik!</h2>
+<h1>Welcome to DevOps world!!!</h1>
+</div>
+</body>
+</html>
+exit
+//나와서
+docker commit <container id or name> <new image name>
+// new image name convention : swedemo/webservice
+docker images // image size 확인
+docker ps 
+// webservice container 실행
+********
+docker run -it -p 81:80 -d swedemo/webservice // port forwarding
+********
+docker ps
+docker exec -it <container id or name> bash // 
+//continer 속에서
+service apache2 status
+service apahe2 start
+exit
+// 현재 EC2의 public IP 주소 복사 후
+// 웹 브라우저에 EC2 기계의 IP 주소:81 입력
+// 연결되지 않는 이유 브라우저에서 확인
+// EC2 기계의 security inbound rule에서 TCP 81 포트 열고 나서 
+웹 브라우저에서 다시 EC2 IP:81 입력하여 ubuntu apache2 default page 확인
+//웹 브라우저에서 EC2 IP:81/1.html 입력하여 확인
+
+docker push swedemo/webservice
+// hub.docker.com에서 확인
+// denied: requested access to the resource is denied 에러 발생하면 
+docker tag <image_name> <dockerhub_id>/<image_name>
+// docker tag 명령으로 docker tag를 dockerhub id와 동일하게 설정 후 다시 docker push 실행
+// 이미 만들어져 있는 이미지에 태그 붙이는 명령 docker image tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]

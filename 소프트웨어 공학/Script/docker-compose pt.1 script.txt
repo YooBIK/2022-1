@@ -1,0 +1,22 @@
+// docker-compose pt.1
+// docker-compose 설치
+https://docs.docker.com/compose/install/
+
+sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+sudo chmod +x /usr/local/bin/docker-compose
+docker-compose --version // 설치 확인
+
+// test 해보기
+mkdir test; cd test; vim docker-compose.yml
+
+version: ‘3.9’  // compose file version (docker version 20.10.7은 3.9로 보임, 하위 버전 사용 OK)  
+services:    // indentation에 매우 주의 필요 – version 3이상부터는 4개의 space 
+    hello-world:
+        image: hello-world:latest
+docker-compose up
+docker ps
+
+연습하기 - https://docs.docker.com/compose/gettingstarted/
+https://docs.docker.com/samples/wordpress/
+

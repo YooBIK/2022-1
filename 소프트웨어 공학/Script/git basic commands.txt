@@ -1,0 +1,71 @@
+sudo apt-get install git // git vs git-all
+sudo apt-get update
+git --version
+git --help
+
+mkdir demo1;
+cd demo1
+git init // git init demo1; cd demo1
+git status
+ls -al
+git config -h
+git config --global user.name '<이름>'
+git config --global user.email <email address>
+git config --global core.editor vim
+git config --list // git config -l
+git config user.name // git config <key>
+vim 1.txt  //1.txt created
+vim 2.txt  //2.txt created
+la -al
+git status
+// 출력문을 꼼꼼히 읽고 실험해 볼 것
+git add .
+rm 1.txt
+cat 1.txt
+git status 
+git restore 1.txt 
+git status // restore 된 것 확인, restore란 무엇?
+
+git rm --cached 1.txt  // unstage
+cat 1.txt // filesystem에는 있는 것 확인
+git status
+rm 1.txt
+cat 1.txt // rm 된 것 확인
+git restore 1.txt // 실패 확인 stage에 없음
+
+vim 3.txt //3.txt created
+git status
+git add .
+git commit -am'1st commit 2.txt & 3.txt' 
+git status
+git log
+
+vim 2.txt   // modify to include 'line 2 added'
+git status // modified: 2.txt
+cat 2.txt // 변경된것 확인
+git restore 2.txt // 변경 되돌림, 조심 사용
+cat 2.txt
+
+vim 2.txt // line 2 added again
+cat 2.txt
+git commit -am'2nd commit 2.txt 3.txt'   
+
+git log // to find commit history
+git checkout <1st commit-id> // move to 1st commit, i.e., to previous version, 위험한 명령, branch 사용하는 것이 정상
+git status // HEAD detached at <commit-id>
+cat 2.txt // 수정 작업 후 commit 가능
+git log // HEAD가 현재 가리키는 commit 지점은 master가 아닌 과거 commit point에서의 log
+git checkout master // git checkout <2nd commit-id>와 다름
+cat 2.txt
+
+// git commit --amend 연습
+vim 4.txt // 4.txt created
+touch 5.txt
+git add 5.txt
+git commit -m'3rd committed' //git add 4.txt를 실수로 빼먹은 상황
+git add 4.txt // 늦었지만 지금 add 하고나서
+git commit --amend --no-edit
+//또는 commit message를 바꾸고 싶으면 commit --amend -m'update the commit message'
+git status // 확인
+// 만일 4.txt를 git add 한 다음에 다른 새로운 commit을 원했다면 --amend 없이 새로이 commit하면 됨
+

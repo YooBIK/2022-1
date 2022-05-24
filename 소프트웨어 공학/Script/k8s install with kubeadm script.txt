@@ -1,0 +1,218 @@
+Script 사이트
+https://computingforgeeks.com/deploy-kubernetes-cluster-on-ubuntu-with-kubeadm/
+
+설치 안내 공식 페이지
+https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#verify-mac-address
+
+(준비) 
+- 2개의 EC2 - 2 GiB or more of RAM per machine
+  At least 2 CPUs on the control plane machine - t2.medium
+- inbound rule 수정 - 강의 자료에 주어진 k8s 관련 TCP port 열어 두어야 하는데, 편의상 모든 TCP port를 열어 두고 실습
+- worker 노드와 master 노드는 k8s 입장에서 client-server 관계가 아님 
+- worker도 서비스 입장에서는 server이므로 k8s install 문서에서는 worker server로 부름
+- install 시작 전에 다른 작업 하던 것이 있으면 EC2 기계 reboot 한 다음에 시작 (즉 EC2 기계 stop 시켰다가 다시 start)
+
+<<<master와 worker 두 기계 모두를 다음과 같이 준비>>>
+설치 모듈들과 시스템 파일 편집 등 root 권한이 필요한 작업이 많으므로 
+(0) sudo su - // - 는 root environment 에서 root 권한으로 작업하기에 필요
+
+(1) K8s servers update & upgrade 
+- apt update
+- apt -y install curl apt-transport-https ca-certificates 
+// apt-transport-https는 HTTPS 프로토콜을 사용하여 downlod 하는 APT transport 도구
+
+(2) google gpg key download
+- curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+// 비표준 사이트로부터 k8s 모듈들을 다운받기 때문에 소스 사이트를 인증해야 하는 key 다운받기
+
+(3) add k8s repository 
+- echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee /etc/apt/sources.list.d/kubernetes.list 
+// 쿠버네티스 apt 리포지터리를 추가
+
+(4) package 설치
+- apt update 
+- apt install -y kubelet kubeadm kubectl
+- apt-mark hold kubelet kubeadm kubectl
+- kubectl version --client && kubeadm version 실행하면 Client Version 과 kubedm version 출력됨
+
+(5) disable swap
+- swapoff -a
+// swapoff -a 결과 확인
+- free -h
+// reboot 되어도 swapoff 되도록 /etc/fstab 중 swap 부분 주석 처리
+- sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+// 확인
+cat /etc/fstab
+
+(6) kernel module 사용 설정과 sysctl 구성
+- modprobe overlay  
+// modprobe는 커널 모듈 적재/제거 명령
+// kernel에 overlay 설치, overlay는 linux vertual network, overlay2(vertualized L2 network), overlay3(L3) 
+- modprobe br_netfilter
+// br_netfilter는 k8s pod들 사이에 VXLAN 을 통해 통신하는 데에 사용하는 모듈
+- tee /etc/sysctl.d/kubernetes.conf<<EOF
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+net.ipv4.ip_forward = 1
+EOF
+//reload sysctl
+- sysctl --system  
+// sysctl 명령어는 Runtime 중에 커널 속성에 접근, 수정하는 명령
+// sysctl.d 는 boot 할 때 커널 파라미터들을 config 하는 명령
+// 위 경우에는 kubernetes.conf 파일에 필요한 파리키러를 설정함
+// sysctl --system 은 모든 디렉토리의 값을 읽는 명령
+
+(7) docker container runtime 설치
+// docker, cri-o, containerd 세 가지 중 아무거나 편리한 container runtime 설치하면 됨
+// 우리는 docker 가 익숙하므로 docker를 선택하는 것처럼 보이겠지만 실제에서는 아무 것이나 설치해도 OCI 규약을 만죽하는 어떠한 container 들도 모두 사용할 수 있음
+(7-1) repo를 추가하고 필요 package 설치
+- apt update
+- apt install -y curl gnupg2 software-properties-common apt-transport-https ca-certificates
+- curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+- add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+- apt update
+- apt install -y containerd.io docker-ce docker-ce-cli
+(7-2) 필요한 디렉토리 생성
+mkdir -p /etc/systemd/system/docker.service.d
+(7-3) ademon.json config 파일 생성
+- tee /etc/docker/daemon.json <<EOF
+{
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "100m"
+  },
+  "storage-driver": "overlay2"
+}
+EOF
+--- 또는 ---
+- cat <<EOF | tee /etc/docker/daemon.json
+{
+"exec-opts": ["native.cgroupdriver=systemd"],
+"log-driver": "json-file",
+"log-opts": {
+"max-size": "100m"
+},
+"storage-driver": "overlay2"
+}
+EOF
+
+(7-4) service 들을 시작하고 enable 시킴
+- systemctl daemon-reload
+- systemctl restart docker
+- systemctl enable docker
+// enable은 내부 명령 사용을 허가 또는 금지하는 명령
+
+
+<<<< master 노드로 사용할 EC2 기계에서만 작업 >>>
+(8) master node 작동 시키기 (etcd와 api server가 설치됨) 
+(8-1) br_netfilter module 장착되었는지 확인
+- lsmod | grep br_netfilter
+// br_netfilter 와 bridge 에 대한 내용이 출력될 것임
+(8-2) kubelet 서비스를 enable 시킴
+- systemctl enable kubelet  
+(8-3) master노드가 필요한 image들을 pull
+- kubeadm config images pull
+// [config/images] Pulled k8s.gcr.io/kube-apiserver:v1.23.5 등과 같은 이미지가 pulled 되었다는 여러 줄의 결과 문자이 출력됨
+(8-4) 만일 여러 종류의 CRI (container runtime interface)를 설치한 경우에는 다음과 같이 docker cri를 선택 (하나만 있는 경우에는 불필요)
+// - kubeadm config images pull --cri-socket /run/cri-dockerd.sock
+(8-5) 우리는 k8s DNS 사용 없이 cluster를 bootstrap하기 (bootstrap without shared endpoint) - master나 worker의 IP 주소 대신에 이름을 사용하는 것을 shared endpoint 라고 하며 내부 DNS에 호스트 이름을등록하여 shared endpoint 사용. 그러나 EC2 기계는 rebooting 하면 ip주소가 새로이배정되므로 우리의 경우에는 오히려 불편, AWS에서는 고정 ip주소를 elastic ip 라고 부르면 유료!
+- kubeadm init --pod-network-cidr=192.168.0.0/16 --apiserver-advertise-address=<master 기계의 private IP address>
+// kubeadm init 실행 결과로 다음과 같은 문장 출력됨
+....
+[init] Using Kubernetes version: v1.23.5
+[preflight] Running pre-flight checks
+	[WARNING Firewalld]: firewalld is active, please ensure ports [6443 10250] are open or your cluster may not function correctly
+[preflight] Pulling images required for setting up a Kubernetes cluster
+[preflight] This might take a minute or two, depending on the speed of your internet connection
+[preflight] You can also perform this action in beforehand using 'kubeadm config images pull'
+[kubelet-start] Writing kubelet environment file with flags to file "/var/lib/kubelet/kubeadm-flags.env"
+[kubelet-start] Writing kubelet configuration to file "/var/lib/kubelet/config.yaml"
+[kubelet-start] Starting the kubelet
+[certs] Using certificateDir folder "/etc/kubernetes/pki"
+[certs] Using existing ca certificate authority
+--중략--
+후반부에 다음과 같은 문장 출력됨
+Your Kubernetes control-plane has initialized successfully!
+
+To start using your cluster, you need to run the following as a regular user:
+
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+You should now deploy a pod network to the cluster.
+Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
+  https://kubernetes.io/docs/concepts/cluster-administration/addons/
+
+You can now join any number of control-plane nodes by copying certificate authorities
+and service account keys on each node and then running the following as root:
+위 문장 아래에 worker 노드들에서 실행하여 master의 k8s cluster에 join할 수 있는 명령어가 출력되며, 이 명령을 복사하여 worker 노드에서 root 권한으로 실행하여 join 시킴
+(8-6) master 노드에서 kubectl 명령 사용해 보기
+//master 기계에서 root로부터 logout 하고 일반 유저로 나오고 싶으면, root로부터 logout 하여 user ubuntu로 와서 다음 세 명령을 실행 
+- mkdir -p $HOME/.kube
+- sudo cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
+- sudo chown $(id -u):$(id -g) $HOME/.kube/config
+// cluster 상태를 확인
+- kubectl cluster-info
+// 일반 유저로 나오지 말고 root에서 다음을 실행하고 kubectl 사용해도 됨
+- export KUBECONFIG=/etc/kubernetes/admin.conf
+- kubectl get nodes
+// 아직 third-party k8s network add-on이 설치되어 있지 않으므로 NotReady로 나옴
+// 우리는 calico add-on 설치
+- kubectl create -f https://docs.projectcalico.org/manifests/tigera-operator.yaml 
+- kubectl create -f https://docs.projectcalico.org/manifests/custom-resources.yaml
+(// 위 두 명령 대신에 아래 명령으로 대체 가능
+      - kubectl apply -f        https://docs.projectcalico.org/manifests/calico.yaml)
+// 아래 명령들을 다시 실행해서 calico add-on이 설치되어 모든 노드들이 Ready 된 상태 확인해 봄
+- kubectl get nodes -o wide
+- kubectl get pods --all-namespaces
+// docker ps를 실행하여 많은 수의 container들이 active한 것 확인
+// 우리가 docker.io를 설치한 적 없지만 위에서 docker container runtime을 설치할 때 설치되었음. 즉 install docker.io는 위 docker container runtime을 설치하는 것
+// worker 노드에서도 docker ps를 실행하면 master에 비해서는 적은 수이지만 active 한 docker container를 볼 수 있음
+
+<<< 아래는 worker 노드에서 실행 >>>
+(9) worker 노드에서 cluster에 join 시킴
+// 앞 (8-5) 단계의 master에서 실행하 결과 출력문 중 worker 노드 용 명령을 복사하여 실행하면 다음과 같은 문장 출력됨
+----
+[preflight] Reading configuration from the cluster...
+[preflight] FYI: You can look at this config file with 'kubectl -n kube-system get cm kubeadm-config -oyaml'
+[kubelet-start] Downloading configuration for the kubelet from the "kubelet-config-1.21" ConfigMap in the kube-system namespace
+[kubelet-start] Writing kubelet configuration to file "/var/lib/kubelet/config.yaml"
+[kubelet-start] Writing kubelet environment file with flags to file "/var/lib/kubelet/kubeadm-flags.env"
+[kubelet-start] Starting the kubelet
+[kubelet-start] Waiting for the kubelet to perform the TLS Bootstrap...
+
+This node has joined the cluster:
+* Certificate signing request was sent to apiserver and a response was received.
+* The Kubelet was informed of the new secure connection details.
+-----
+<<< 다시 master 노드에서 >>>
+(8-7) 아래 kubectl 명령들을 master에서 다시 실행하여 모든 노드가 ready 상태로 cluster에 join 된 것을 확인
+- kubectl get nodes -o wide
+- kubectl get pods --all-namespaces
+
+------------
+
+(10) app을 cluster에 deploy 해 보기 예제
+https://kubernetes.io/ko/docs/tasks/access-application-cluster/service-access-application-cluster/ 에 친절한 예제와 설명
+// master 노드에서 실행해야 함
+- kubectl apply -f https://k8s.io/examples/service/access/hello-application.yaml
+// 이후 명령은 위 예제 소개 페이지 참조
+
+----------------------------------------
+
+Clean up // 실습 후 정리할 때
+# kubeadm 초기화
+- kubeadm reset
+- iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X // 수작업으로 k8s cluster 용 iptable 등등을 제거
+- apt install ipvsadm
+- ipvsadm -C // reset the IPVS tables
+// kubeadm reset 이후 reboot 하면 완전히 정리됨
+
+
+
+
+
+
+

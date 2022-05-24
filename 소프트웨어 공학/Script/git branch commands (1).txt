@@ -1,0 +1,69 @@
+==========
+branch
+------
+git init demo; cd demo
+vim 1.txt
+git add .
+git status
+git commit -m'1st commit in master'
+git branch // master branch 하나만 있는 것 확인
+vim 1.txt // master에서 수정 
+git commit -am '2nd commit 1.txt modified' // -a option to git add 
+cat 1.txt // in master
+
+git branch issue1
+git checkout issue1 // now in issue1 branch
+vim 1.txt // issue1 resolved
+git commit -am 'issue1 resolved in branch issue1'
+git log 
+
+git checkout master
+git log
+cat 1.txt // issue1 branch와 다른 것 확인
+vim 1.txt  // master 브랜치에서 다시 수정
+git commit -am'3rd commit 1.txt modified in master'
+cat 1.txt // master 브랜치에서 확인
+
+git log // view in master
+git checkout issue1
+git log // master에서 2번 commit후에 issue1에서 (1.txt수정 후) 추가 commit 된 것 확인
+// commit-id 확인
+
+
+--- fig 1--- 
+
+============
+git checkout master
+git checkout -b hotfix // 브랜치 만들면서 이동
+vim 1.txt  // hot fix done
+git commit -am'hot fix committed in hotfix'
+cat 1.txt
+git log // HEAD 확인
+git checkout master
+cat 1.txt
+git log // HEAD 확인
+git merge hotfix  // "fast forward" 확인
+git branch // branch 확인
+git log // HEAD->master, hotfix 확인, merge 되었으니까
+git branch -d hotfix  // delete hot fix
+git log // hotfix 사라진 것 확인
+git branch // hotfix 없어진 것 다시 확인 
+--- fig 2 ---
+
+git log // HEAD->master 확인
+git branch // master와 issue1 확인
+git merge issue1  // 3 way merge 
+// merge conflict 확인
+git mergetool   // vimdiff 사용하여 각 1.txt 수정
+git branch // merge 상황 확인 후에
+git commit -am'merge conflcit resolved' // 최종 commit 필요
+git log
+cat 1.txt // in master
+git checkout issue1
+cat 1.txt  // in issue1 branch
+--- fig 3---
+
+
+
+
+

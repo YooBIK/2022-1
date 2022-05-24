@@ -1,0 +1,76 @@
+블락 암호도 누락이 될 수 있다.
+1비트 오류가 블록 전체에 오류를 야기시킴
+CBC는 오류가 발생해도 해당 블록과 그 다음블록 까지만 영향을 받는다.(복호화 과정을 생각해보자)
+그래서 오류를 자동으로 복원한다고 할 수 있다.
+
+ECB CBC 는 여전히 CUT AND PASTE 공격에 약함
+
+MAC - 데이터의 무결성을 보기 위한 방법
+
+Counter Mode(CTR)
+Count값(offset) 설정 후 
+평문 블록의 순서에 따라 카운트값을 순차적으로 증가
+p1 xor Encript(Count) = c1
+p2 xor Encript(Count+1) = c2
+p3 xor Encript(Count+2) = c3
+이런식으로 하면 복호화를 병렬로 처리할 수 있음.
+각 블록을 복호화 하고 순서만 조정하면됨
+
+Cipher Feedback Mode(CFB)
+CBC와 비슷하나 순서가 좀 다름
+
+Encript(C0) xor P1 = C1
+Encript(C1) xor P2 = C2 
+이런식 
+
+Output Feedback Mode(OFM)
+Encript(C0) xor P1 = C1
+Encript(Encript(C0)) xor P2 = C2
+Encript(Encript(Encript(C0)))xor P3 = C3
+이런식으로 감
+
+Galois Counter Mode(GCM)
+Authenticated Encryption with Associated Data(AEAD)- 데이터를 암호화 하면서 무결성도 확보하는 메커니즘
+
+공개키 암호화(Asymmetric crypto primitives)
+-RSA(Rivest, Shamir, Adleman)	: 합성수를 두개의 임의의 소수로 인수분해하는 어려움에 기반한 알고리즘
+factoring 기반의 암호화,
+(1)p,q 는 큰 소수
+(2)N= pq	modulus
+(3)e는 (p-1)(q-1)의 서로소
+(4)ed = 1 mod (p-1)(q-1)
+
+public key는 (N,e) private key는 d
+Message M(평문)을 암호화 할 때, C = M^e mod N (전제 : M<N)
+암호문 C를 복호화 할때 M = C^d mod N
+
+암호화 및 복호화에 시간이 오래걸림
+e값이 너무 작으면 문제가 생김 통상적으로 RSA는 계산이 복잡해서
+e값을 3으로 잡는 경우가 많아서 3제곱근으로 풀어버리면 원문이 드러나는 경우가 많음
+
+
+
+
+-Diffie-Hellman key establishment : discrete logarithms 로그 기반
+이산 로그 기반의 알고리즘
+키 교환을 하는 메커니즘
+p,g : 공개
+A's private key : x, B's private key : y  -> 비공개
+A와 B 가 키를 교환할 때, p = 17, g = 2, x = 11, y = 13 라하면,
+g^x mod p = 2^11 mod 17 = 8 을 보냄 	A->B
+g^y mod p = 2^13 mod 17 = 15를 보냄 B->A
+A의 입장에서 15(받은 값)^11(개인키) mod 17 = 9
+B의 입장에서 8(받은 값)^13(개인키) mod 17 = 9
+같은 값이 나오고, 그 값을 대칭키로 사용
+
+중간자 공격에 취약함
+
+-Elliptic curve cryptography 	: 타원 곡선을 나타내는 다항식의 성질을 이용한 암호화
+서명과 암호화 둘다 가능
+짧은 키를 가지고 높은수준의 보안을 제공
+빠르다.
+
+
+-CAs(Certification authorities) 	: 인증기관	
+
+	

@@ -1,0 +1,14 @@
+kubernetes yaml 파일 사용 예제 url
+
+https://kubernetes.io/ko/docs/tasks/access-application-cluster/service-access-application-cluster/
+
+https://kubernetes.io/ko/docs/tasks/run-application/run-stateless-application-deployment/
+
+
+
+Mirantis 사이트의k8s yaml 파일 소개 url
+
+https://www.mirantis.com/blog/getting-started-with-kubernetes-part-1-introduction-to-yaml-webinar/
+
+https://www.mirantis.com/blog/introduction-to-yaml-creating-a-kubernetes-deployment/#maps
+

@@ -1,0 +1,49 @@
+github 계정 2개 만들어 두기
+   - new repository 만들기
+   - personal access token
+
+(1) mkdir remote-repo; cd remote-repo // git init 하지 않았음
+// github repo에 파일 만들어 두고 실험
+git clone <github repo url> . // git init 없이 
+git status 
+git remote 
+git branch 
+// 파일 작업 후 add, commit 하고 git status 확인
+git push origin main // password로 시도
+// authentication is supported no longer since Aug. 2021
+// personal access token 만들어 보관하기
+// 오른 편 위쪽 settings->왼편 아래 <>developer settings ->왼편 위 personal access token -> 오른 편 위 -> generate token => 복사하여 잘 보관 (credential manager를 사용하여 매번 입력하지 않고 사용) // github에서 한번 만들어진 toekn을 다시 보여주지 않는 불편함
+
+// github repo에 push되었는지 commit 메시지 및 내용 확인
+// github에서 history도 확인
+
+// 통상 push 이전에 pull하여 동기화 권장
+git pull origin main // pull = fetch & merge
+
+// github 계정에 push 된 것 확인
+
+(2) git init demo; cd demo; 
+// git commit 후에 
+git branch -M (-m) main // 또는 -m 옵션 없이는 git branch main; git checkout main
+git remote add origin <url>
+git push -u origin main
+
+(3) github demo
+- github 웹 페이지 로그인
+- 새로운 repository 만들기 - markdown.md 만들기로 - git remote add 로도 가능
+- 새 repository에서 파일 생성, commit
+- 수정 후 commit
+- branch 만들고 새 파일 만들고 commit
+- pull request 확인
+- branch에서 기존 파일 merge conflict 생긷록 수정 후 commit
+- pill request에서 merge conflict 확인
+
+(4) github contribution - fork
+
+
+
+
+
+
+
+

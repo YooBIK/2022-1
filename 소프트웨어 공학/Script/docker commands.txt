@@ -1,0 +1,39 @@
+sudo apt-get update
+sudo apt install docker.io
+docker --version
+docker --help
+docker run hello-world
+cat /etc/group
+sudo usermod -aG docker $USER
+docker run hello-world
+// logout and log back in
+docker images
+
+
+docker pull ubuntu // docker run을 수행하면 pull부터 먼저 자동 수행
+docker images
+
+//run
+docker run -it -d ubuntu 
+docker ps
+
+//exec
+docker exec -it <container id> <program in the container>
+// ubuntu container 안으로 진입한 것 확인 후 
+mkdir test; cd test; ls -al
+// container에서 나올 때는
+exit  // container에서 EC2 기계로 나온 것 확인
+
+//stop
+docker stop <container id>  // SIGTERM
+docker kill <container id>  // SIGKILL
+docker ps // container name 확인
+docker ps -a
+
+//remove 
+docker run -it -d ubuntu 
+docker ps
+docker rm (-f) <container id>  // remove continer process
+docker ps
+docker images
+docker rmi (-f) <image id> // remove image
